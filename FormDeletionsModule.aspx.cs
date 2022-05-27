@@ -32,7 +32,7 @@ namespace ContentExportTool
             var formsFolder = Sitecore.Configuration.Factory.GetDatabase("master").GetItem("/sitecore/Forms");
             if (formsFolder != null)
             {
-                var forms = formsFolder.Children.Where(x => x.TemplateName == "Form");
+                var forms = formsFolder.Axes.GetDescendants().Where(x => x.TemplateName == "Form");
                 ddForms.DataSource = forms;
                 ddForms.DataTextField = "Name";
                 ddForms.DataValueField = "ID";
