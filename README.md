@@ -4,7 +4,9 @@ This module allows the user to delete specific entries for a given Sitecore form
 
 This module is for **Sitecore Forms**; it will not work with WFFM.
 
-Tested in Sitecore 9.1.0; other versions coming soon.
+Tested in Sitecore 9.2.0; other versions coming soon.
+
+*Note* The Export currently works in 10.0, but the Delete feature does not work because the Database Tables have different names in 10.0. This compatibility will be coming soon.
 
 **Dependent on the following libraries:**
 System;
