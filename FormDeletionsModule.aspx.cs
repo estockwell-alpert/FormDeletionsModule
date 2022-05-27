@@ -71,7 +71,7 @@ namespace ContentExportTool
                 return;
             }
 
-            StartResponse("Form Data - ");
+            StartResponse("Form Data - " + ddForms.SelectedItem.Text);
             using (StringWriter sw = new StringWriter())
             {
                 var fields = data.FirstOrDefault().Fields.Select(x => x.FieldName);
