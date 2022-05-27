@@ -10,18 +10,31 @@ Tested in Sitecore 9.2.0; other versions coming soon.
 
 **Dependent on the following libraries:**
 System;
+
 System.Collections.Generic;
+
 System.IO;
+
 System.Linq;
+
 System.Web;
+
 System.Web.UI;
+
 Sitecore.Data.Managers;
+
 Sitecore.ExperienceForms.Data;
+
 System.Configuration;
+
 System.Data.SqlClient;
+
 Sitecore.Sites;
+
 System.Text;
+
 System.Globalization;
+
 System.Threading.Tasks;
 
 # Installation
