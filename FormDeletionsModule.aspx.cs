@@ -94,7 +94,11 @@ namespace ContentExportTool
                     foreach (var field in fields)
                     {
                         var entryField = entry.Fields.FirstOrDefault(x => x.FieldName == field);
-                        itemLine += "\"" + entryField.Value + "\",";
+						if (entryField != null){
+							itemLine += "\"" + entryField.Value + "\",";
+						}else{
+							itemLine += ",";
+						}
                     }
 
                     sw.WriteLine(itemLine);
