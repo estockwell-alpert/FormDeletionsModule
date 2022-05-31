@@ -12,6 +12,7 @@ using Sitecore.Sites;
 using System.Text;
 using System.Globalization;
 using System.Threading.Tasks;
+using System.Data;
 
 namespace ContentExportTool
 {
@@ -32,7 +33,7 @@ namespace ContentExportTool
             var formsFolder = Sitecore.Configuration.Factory.GetDatabase("master").GetItem("/sitecore/Forms");
             if (formsFolder != null)
             {
-				var forms = formsFolder.Axes.GetDescendants().Where(x => x.TemplateName == "Form");
+                var forms = formsFolder.Axes.GetDescendants().Where(x => x.TemplateName == "Form");
                 ddForms.DataSource = forms;
                 ddForms.DataTextField = "Name";
                 ddForms.DataValueField = "ID";
@@ -95,7 +96,7 @@ namespace ContentExportTool
                     {
                         var entryField = entry.Fields.FirstOrDefault(x => x.FieldName == field);
 						if (entryField != null){
-							itemLine += "\"" + entryField.Value + "\",";
+                        itemLine += "\"" + entryField.Value + "\",";
 						}else{
 							itemLine += ",";
 						}
@@ -154,6 +155,8 @@ namespace ContentExportTool
 
             var entriesDelete = 0;
 
+            var isSitecore10 = IsSitecore10(formsConnectionString);
+
             using (TextReader tr = new StreamReader(file.InputStream))
             {
                 CsvParser csv = new CsvParser(tr);
@@ -184,83 +187,80 @@ namespace ContentExportTool
 
                         var entryId = cells[formEntryId];
 
-                        string commandText = @"DELETE from [FieldData] WHERE FormEntryId = @EntryId";
+                        var fieldDataTable = isSitecore10 ? "[sitecore_forms_storage].[FieldData]" : "[FieldData]";
+
+                        string commandText = "DELETE from " + fieldDataTable + " WHERE FormEntryId = @EntryId";
 
 
                         // delete from field data table
                         try
                         {
-                            using (SqlConnection connection = new SqlConnection(formsConnectionString))
-                            {
-                                SqlCommand command = new SqlCommand(commandText, connection);
-                                command.Parameters.Add("@EntryId", System.Data.SqlDbType.UniqueIdentifier);
-                                command.Parameters["@EntryId"].Value = new Guid(entryId);
-                                connection.Open();
-                                using (SqlDataReader reader = command.ExecuteReader())
-                                {
-                                    var result = ParseResults(reader);
-                                }
-                                connection.Close();
-                            }
+                            RunSqlCommand(commandText, entryId, formsConnectionString);
                         }
                         catch (Exception ex)
                         {
-                            litFormsResponse.Text += ex.ToString();
+                            litFormsResponse.Text += "Error deleting " + entryId + " from FieldData table: " + ex.ToString();
                             Sitecore.Diagnostics.Log.Error("Forms database communication error.", ex, (object)this);
                         }
 
 
                         // delete from entries table
-                        string commandTextEntries = @"DELETE from [FormEntry] WHERE ID = @EntryId";
+                        var formEntryTable = isSitecore10 ? "[sitecore_forms_storage].[FormEntries]" : "[FormEntry]";
+                        commandText = "DELETE from " + formEntryTable + " WHERE ID = @EntryId";
                         try
                         {
-                            using (SqlConnection connection = new SqlConnection(formsConnectionString))
-                            {
-                                SqlCommand command = new SqlCommand(commandTextEntries, connection);
-                                command.Parameters.Add("@EntryId", System.Data.SqlDbType.UniqueIdentifier);
-                                command.Parameters["@EntryId"].Value = new Guid(entryId);
-                                connection.Open();
-                                using (SqlDataReader reader = command.ExecuteReader())
-                                {
-                                    var result = ParseResults(reader);
-                                }
-                                connection.Close();
-
-                                entriesDelete++;
-                            }
+                            RunSqlCommand(commandText, entryId, formsConnectionString);
+                            entriesDelete++;
                         }
                         catch (Exception ex)
                         {
-                            commandTextEntries = @"DELETE from [FormEntries] WHERE ID = @EntryId";
-                            try
-                            {
-                                using (SqlConnection connection = new SqlConnection(formsConnectionString))
-                                {
-                                    SqlCommand command = new SqlCommand(commandTextEntries, connection);
-                                    command.Parameters.Add("@EntryId", System.Data.SqlDbType.UniqueIdentifier);
-                                    command.Parameters["@EntryId"].Value = new Guid(entryId);
-                                    connection.Open();
-                                    using (SqlDataReader reader = command.ExecuteReader())
-                                    {
-                                        var result = ParseResults(reader);
-                                    }
-                                    connection.Close();
-
-                                    entriesDelete++;
-                                }
-                            }
-                            catch (Exception ex2)
-                            {
-                                litFormsResponse.Text += ex.ToString();
-                                Sitecore.Diagnostics.Log.Error("Forms database communication error.", ex, (object)this);
-                            }
+                            litFormsResponse.Text += "Error deleting " + entryId + " from Form Entry table: " + ex.ToString();
+                            Sitecore.Diagnostics.Log.Error("Forms database communication error.", ex, (object)this);
                         }
 
                     }
                 }
             }
 
-            litFormsResponse.Text = "Deleted " + entriesDelete + " entries";
+            litFormsResponse.Text += "Deleted " + entriesDelete + " entries";
+        }
+
+        protected bool IsSitecore10(string connectionstring)
+        {
+            List<string> TableNames = new List<string>();
+
+            using (SqlConnection connection = new SqlConnection(connectionstring))
+            {
+                connection.Open();
+                var schema = connection.GetSchema("Tables");
+                foreach (DataRow row in schema.Rows)
+                {
+                    TableNames.Add(row[2].ToString());
+                }
+                connection.Close();         
+            }
+
+            if (TableNames.Any(x => x.Contains("FormEntries")))
+            {
+                return true;
+            }
+            return false;
+        }
+
+        protected void RunSqlCommand(string commandText, string entryId, string connectionstring)
+        {
+            using (SqlConnection connection = new SqlConnection(connectionstring))
+            {
+                SqlCommand command = new SqlCommand(commandText, connection);
+                command.Parameters.Add("@EntryId", System.Data.SqlDbType.UniqueIdentifier);
+                command.Parameters["@EntryId"].Value = new Guid(entryId);
+                connection.Open();
+                using (SqlDataReader reader = command.ExecuteReader())
+                {
+                    var result = ParseResults(reader);
+                }
+                connection.Close();
+            }
         }
 
         protected Dictionary<string, int> ParseResults(SqlDataReader reader)
