@@ -40,13 +40,13 @@ namespace ContentExportTool {
         protected global::System.Web.UI.WebControls.Literal litFeedback;
         
         /// <summary>
-        /// litFormsResponse control.
+        /// litExportResponse control.
         /// </summary>
         /// <remarks>
         /// Auto-generated field.
         /// To modify move field declaration from designer file to code-behind file.
         /// </remarks>
-        protected global::System.Web.UI.WebControls.Literal litFormsResponse;
+        protected global::System.Web.UI.WebControls.Literal litExportResponse;
         
         /// <summary>
         /// ddForms control.
@@ -67,6 +67,15 @@ namespace ContentExportTool {
         protected global::System.Web.UI.WebControls.Button btnExportForms;
         
         /// <summary>
+        /// litDeleteByIdResponse control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::System.Web.UI.WebControls.Literal litDeleteByIdResponse;
+        
+        /// <summary>
         /// uplFormDelete control.
         /// </summary>
         /// <remarks>
@@ -83,5 +92,104 @@ namespace ContentExportTool {
         /// To modify move field declaration from designer file to code-behind file.
         /// </remarks>
         protected global::System.Web.UI.WebControls.Button btnDeleteFormEntries;
+        
+        /// <summary>
+        /// litFeedbackWhere control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::System.Web.UI.WebControls.Literal litFeedbackWhere;
+        
+        /// <summary>
+        /// ddDeleteWhereSelection control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::System.Web.UI.WebControls.DropDownList ddDeleteWhereSelection;
+        
+        /// <summary>
+        /// inptFieldName control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::System.Web.UI.WebControls.TextBox inptFieldName;
+        
+        /// <summary>
+        /// inptFieldValue control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::System.Web.UI.WebControls.TextBox inptFieldValue;
+        
+        /// <summary>
+        /// radioEquals control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::System.Web.UI.WebControls.RadioButton radioEquals;
+        
+        /// <summary>
+        /// radioContaines control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::System.Web.UI.WebControls.RadioButton radioContaines;
+        
+        /// <summary>
+        /// chkCaseSensitive control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::System.Web.UI.WebControls.CheckBox chkCaseSensitive;
+        
+        /// <summary>
+        /// btnDeleteWhere control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::System.Web.UI.WebControls.Button btnDeleteWhere;
+        
+        /// <summary>
+        /// litModifyFeedback control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::System.Web.UI.WebControls.Literal litModifyFeedback;
+        
+        /// <summary>
+        /// uplModifyFile control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::System.Web.UI.WebControls.FileUpload uplModifyFile;
+        
+        /// <summary>
+        /// btnModifyEntries control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::System.Web.UI.WebControls.Button btnModifyEntries;
     }
 }

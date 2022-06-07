@@ -13,14 +13,19 @@ using System.Text;
 using System.Globalization;
 using System.Threading.Tasks;
 using System.Data;
+using System.Web.UI.WebControls;
 
 namespace ContentExportTool
 {
     public partial class FormDeletionsModule : Page
     {
+        public string _formsConnectionString { get; set; }
+
         protected void Page_Load(object sender, EventArgs e)
         {
             litFeedback.Text = String.Empty;
+
+            _formsConnectionString = GetConnectionString();
 
             if (!IsPostBack)
             {
@@ -33,11 +38,16 @@ namespace ContentExportTool
             var formsFolder = Sitecore.Configuration.Factory.GetDatabase("master").GetItem("/sitecore/Forms");
             if (formsFolder != null)
             {
-                var forms = formsFolder.Axes.GetDescendants().Where(x => x.TemplateName == "Form");
-                ddForms.DataSource = forms;
-                ddForms.DataTextField = "Name";
-                ddForms.DataValueField = "ID";
+                var forms = formsFolder.Axes.GetDescendants().Where(x => x.TemplateName == "Form").OrderBy(x => x.Name);
+                ddForms.DataSource = ddDeleteWhereSelection.DataSource = forms;
+                ddForms.DataTextField = ddDeleteWhereSelection.DataTextField = "Name";
+                ddForms.DataValueField = ddDeleteWhereSelection.DataValueField = "ID";
                 ddForms.DataBind();
+                ddDeleteWhereSelection.DataBind();
+
+                ddDeleteWhereSelection.Items.Insert(0, new ListItem("*Delete From All Forms*", "All"));
+                ddDeleteWhereSelection.Items.Insert(0, new ListItem("-Select a form-", ""));
+
             }
         }
 
@@ -56,10 +66,12 @@ namespace ContentExportTool
 
         protected void btnExportForms_Click(object sender, EventArgs e)
         {
+            ClearFeedback();
+            
             Guid formId;
             if (String.IsNullOrEmpty(ddForms.SelectedValue) || !Guid.TryParse(ddForms.SelectedValue, out formId))
             {
-                litFormsResponse.Text = "You must enter a valid form ID";
+                litExportResponse.Text = "You must enter a valid form ID";
                 return;
             }
 
@@ -68,7 +80,7 @@ namespace ContentExportTool
 
             if (data == null || !data.Any())
             {
-                litFormsResponse.Text = "No entries found for the given form ID";
+                litExportResponse.Text = "No entries found for the given form ID";
                 return;
             }
 
@@ -95,11 +107,14 @@ namespace ContentExportTool
                     foreach (var field in fields)
                     {
                         var entryField = entry.Fields.FirstOrDefault(x => x.FieldName == field);
-						if (entryField != null){
-                        itemLine += "\"" + entryField.Value + "\",";
-						}else{
-							itemLine += ",";
-						}
+                        if (entryField != null)
+                        {
+                            itemLine += "\"" + entryField.Value + "\",";
+                        }
+                        else
+                        {
+                            itemLine += ",";
+                        }
                     }
 
                     sw.WriteLine(itemLine);
@@ -110,40 +125,26 @@ namespace ContentExportTool
 
         protected void btnDeleteFormEntries_Click(object sender, EventArgs e)
         {
+            ClearFeedback();
             var output = "";
 
             var file = uplFormDelete.PostedFile;
             if (file == null || String.IsNullOrEmpty(file.FileName))
             {
-                litFormsResponse.Text = "You must select a file first<br/>";
+                litDeleteByIdResponse.Text = "You must select a file first<br/>";
                 return;
             }
 
             string extension = System.IO.Path.GetExtension(file.FileName);
             if (extension.ToLower() != ".csv")
             {
-                litFormsResponse.Text = "Upload file must be in CSV format<br/>";
+                litDeleteByIdResponse.Text = "Upload file must be in CSV format<br/>";
                 return;
-            }
+            }          
 
-            var connectionStrings = ConfigurationManager.ConnectionStrings;
-            string formsConnectionString = "";
-            if (connectionStrings.Count > 0)
+            if (String.IsNullOrEmpty(_formsConnectionString))
             {
-                foreach (ConnectionStringSettings connectionString in connectionStrings)
-                {
-                    var name = connectionString.Name;
-
-                    if (name.ToLower() == "experienceforms")
-                    {
-                        formsConnectionString = connectionString.ConnectionString;
-                    }
-                }
-            }
-
-            if (String.IsNullOrEmpty(formsConnectionString))
-            {
-                litFormsResponse.Text = "Could not find experienceforms connectionstring";
+                litDeleteByIdResponse.Text = "Could not find experienceforms connectionstring";
                 return;
             }
 
@@ -154,9 +155,7 @@ namespace ContentExportTool
             var deleteIndex = 0;
 
             var entriesDelete = 0;
-
-            var isSitecore10 = IsSitecore10(formsConnectionString);
-
+          
             using (TextReader tr = new StreamReader(file.InputStream))
             {
                 CsvParser csv = new CsvParser(tr);
@@ -187,42 +186,295 @@ namespace ContentExportTool
 
                         var entryId = cells[formEntryId];
 
-                        var fieldDataTable = isSitecore10 ? "[sitecore_forms_storage].[FieldData]" : "[FieldData]";
-
-                        string commandText = "DELETE from " + fieldDataTable + " WHERE FormEntryId = @EntryId";
-
-
-                        // delete from field data table
-                        try
-                        {
-                            RunSqlCommand(commandText, entryId, formsConnectionString);
-                        }
-                        catch (Exception ex)
-                        {
-                            litFormsResponse.Text += "Error deleting " + entryId + " from FieldData table: " + ex.ToString();
-                            Sitecore.Diagnostics.Log.Error("Forms database communication error.", ex, (object)this);
-                        }
-
-
-                        // delete from entries table
-                        var formEntryTable = isSitecore10 ? "[sitecore_forms_storage].[FormEntries]" : "[FormEntry]";
-                        commandText = "DELETE from " + formEntryTable + " WHERE ID = @EntryId";
-                        try
-                        {
-                            RunSqlCommand(commandText, entryId, formsConnectionString);
-                            entriesDelete++;
-                        }
-                        catch (Exception ex)
-                        {
-                            litFormsResponse.Text += "Error deleting " + entryId + " from Form Entry table: " + ex.ToString();
-                            Sitecore.Diagnostics.Log.Error("Forms database communication error.", ex, (object)this);
-                        }
-
+                        litDeleteByIdResponse.Text += DeleteEntryFromTables(entryId, ref entriesDelete);
                     }
                 }
             }
 
-            litFormsResponse.Text += "Deleted " + entriesDelete + " entries";
+            litDeleteByIdResponse.Text += "Deleted " + entriesDelete + " entries";
+        }
+
+        protected void btnModifyEntries_Click(object sender, EventArgs e)
+        {
+            ClearFeedback();
+
+            var output = "";
+
+            var file = uplModifyFile.PostedFile;
+            if (file == null || String.IsNullOrEmpty(file.FileName))
+            {
+                litModifyFeedback.Text = "You must select a file first<br/>";
+                return;
+            }
+
+            string extension = System.IO.Path.GetExtension(file.FileName);
+            if (extension.ToLower() != ".csv")
+            {
+                litModifyFeedback.Text = "Upload file must be in CSV format<br/>";
+                return;
+            }
+
+            if (String.IsNullOrEmpty(_formsConnectionString))
+            {
+                litModifyFeedback.Text = "Could not find experienceforms connectionstring";
+                return;
+            }
+
+            var fieldsMap = new List<String>();
+            var formEntryId = 0;
+            var formItemId = 0;
+
+            var entriesUpdated = 0;
+
+            using (TextReader tr = new StreamReader(file.InputStream))
+            {
+                CsvParser csv = new CsvParser(tr);
+                List<string[]> rows = csv.GetRows();
+                var language = LanguageManager.DefaultLanguage;
+                for (var i = 0; i < rows.Count; i++)
+                {
+                    var line = i;
+                    var cells = rows[i];
+                    if (i == 0)
+                    {
+                        // create fields map
+                        fieldsMap = cells.ToList();
+                        formEntryId = fieldsMap.FindIndex(x => x.ToLower() == "formentryid");
+                        formItemId = fieldsMap.FindIndex(x => x.ToLower() == "formitemid");
+                    }
+                    else
+                    {
+                        try
+                        {
+                            var entryId = cells[formEntryId];
+                            var formId = cells[formItemId];
+
+                            var _formDataProvider = Sitecore.DependencyInjection.ServiceLocator.ServiceProvider.GetService(typeof(IFormDataProvider)) as IFormDataProvider;
+                            var data = _formDataProvider.GetEntries(new Guid(formId), null, null);
+
+                            var entry = data.FirstOrDefault(x => x.FormEntryId.Equals(new Guid(entryId)));
+                            if (entry == null)
+                            {
+                                throw new Exception("Entry with ID " + entryId + " not found");
+                            }
+                         
+                            //var newEntry = new Sitecore.ExperienceForms.Data.Entities.FormEntry();
+                            foreach (var field in fieldsMap)
+                            {
+                                if (field == "FormItemId" || field == "FormEntryId" || field == "Delete" || field == "Created")
+                                    continue;
+
+                                var fieldIndex = fieldsMap.IndexOf(field);
+                                if (fieldIndex < 0) continue;
+                                var entryField = entry.Fields.FirstOrDefault(x => x.FieldName == field);
+
+                                if (entryField == null)
+                                {
+                                    // don't try to create a new field with an empty value
+                                    if (String.IsNullOrEmpty(cells[fieldIndex]))
+                                        continue;
+
+                                    // see if we can find out what the type is
+                                    var entryWithField = data.FirstOrDefault(x => x.Fields.Any(y => y.FieldName == field));
+                                    if (entryWithField == null)
+                                    {
+                                        litModifyFeedback.Text += "Could not set " + field + " for entry " + entryId + " because FieldType is unknown<br/>";
+                                        continue;
+                                    }
+
+                                    var typeField = entryWithField.Fields.FirstOrDefault(x => x.FieldName == field);
+
+                                    entry.Fields.Add(new Sitecore.ExperienceForms.Data.Entities.FieldData()
+                                    {
+                                        FieldName = field,
+                                        ValueType = typeField.ValueType,
+                                        FieldItemId = typeField.FieldItemId,
+                                        FormEntryId = entry.FormEntryId,
+                                        FieldDataId = Guid.NewGuid(),
+                                        Value = cells[fieldIndex],
+                                    });
+                                }
+                                else
+                                {
+                                    entryField.Value = cells[fieldIndex];
+                                }
+                                
+                            }
+                            _formDataProvider.CreateEntry(entry);
+                            entriesUpdated++;
+                        }
+                        catch(Exception ex)
+                        {
+                            litModifyFeedback.Text += "Error modifying row " + (i + 1) + ": " + ex.Message + "<br/>";
+                        }
+                    }
+                }
+            }
+
+            litModifyFeedback.Text += "Modified " + entriesUpdated + " entries";
+        }
+
+        protected void btnDeleteWhere_Click(object sender, EventArgs e)
+        {
+            ClearFeedback();
+
+            var formId = ddDeleteWhereSelection.SelectedValue;
+
+            if (String.IsNullOrEmpty(formId)) {
+                litFeedbackWhere.Text = "You must select a form to delete from";
+                return;
+            }
+
+            var field = inptFieldName.Text;
+            var value = inptFieldValue.Text;
+
+            if (String.IsNullOrEmpty(field) || String.IsNullOrEmpty(value))
+            {
+                litFeedbackWhere.Text = "You must specify and field name and value";
+                return;
+            }
+
+            List<Guid> entryIds = new List<Guid>();
+            var _formDataProvider = Sitecore.DependencyInjection.ServiceLocator.ServiceProvider.GetService(typeof(IFormDataProvider)) as IFormDataProvider;
+
+            List<Guid> formIds = new List<Guid>();
+
+            var allFormsInfo = "";
+
+            if (formId == "All")
+            {
+                var formsFolder = Sitecore.Configuration.Factory.GetDatabase("master").GetItem("/sitecore/Forms");
+                var allForms = formsFolder.Axes.GetDescendants().Where(x => x.TemplateName == "Form");
+
+                formIds = allForms.Select(x => x.ID.Guid).ToList();
+            }
+            else
+            {
+                formIds.Add(new Guid(formId));                
+            }
+          
+            foreach (var id in formIds)
+            {
+                var formCount = 0;
+                var data = _formDataProvider.GetEntries(id, null, null);
+
+                foreach (var entry in data)
+                {
+                    var entryField = entry.Fields.FirstOrDefault(x => x.FieldName.ToLower() == field.ToLower());
+                    if (entryField == null) continue;
+
+                    var entryValue = entryField.Value;
+
+                    if (!chkCaseSensitive.Checked)
+                    {
+                        entryValue = entryValue.ToLower();
+                        value = value.ToLower();
+                    }
+
+                    if (radioEquals.Checked)
+                    {
+                        if (entryValue.Equals(value))
+                        {
+                            entryIds.Add(entry.FormEntryId);
+                            formCount++;
+                        }
+                    }
+                    else if (radioContaines.Checked)
+                    {
+                        if (entryValue.Contains(value))
+                        {
+                            entryIds.Add(entry.FormEntryId);
+                            formCount++;
+                        }
+                    }
+                  
+                }
+
+                if (formId == "All" && formCount > 0)
+                {
+                    var formName = Sitecore.Configuration.Factory.GetDatabase("master").GetItem(id.ToString()).Name;
+                    allFormsInfo += "Found " + formCount + " matching entries in " + formName + "<br/>";
+                }
+            }
+
+            if (!entryIds.Any())
+            {
+                litFeedbackWhere.Text = "No matching entries found";
+                return;
+            }
+
+            var entriesDelete = 0;
+            foreach (var entryId in entryIds)
+            {
+                litFeedbackWhere.Text += DeleteEntryFromTables(entryId.ToString(), ref entriesDelete);
+            }
+
+            litFeedbackWhere.Text += allFormsInfo + "<br/>Deleted " + entriesDelete + " entries";
+        }
+
+        private void ClearFeedback()
+        {
+            litFeedback.Text = "";
+            litFeedbackWhere.Text = "";
+            litExportResponse.Text = "";
+            litDeleteByIdResponse.Text = "";
+        }
+
+        private string GetConnectionString()
+        {
+            var connectionStrings = ConfigurationManager.ConnectionStrings;
+            string formsConnectionString = "";
+            if (connectionStrings.Count > 0)
+            {
+                foreach (ConnectionStringSettings connectionString in connectionStrings)
+                {
+                    var name = connectionString.Name;
+
+                    if (name.ToLower() == "experienceforms")
+                    {
+                        formsConnectionString = connectionString.ConnectionString;
+                    }
+                }
+            }
+            return formsConnectionString;
+        }
+
+        protected string DeleteEntryFromTables(string entryId, ref int entriesDelete)
+        {
+            var output = "";
+            var isSitecore10 = IsSitecore10(_formsConnectionString);
+
+            var fieldDataTable = isSitecore10 ? "[sitecore_forms_storage].[FieldData]" : "[FieldData]";
+
+            string commandText = "DELETE from " + fieldDataTable + " WHERE FormEntryId = @EntryId";
+
+
+            // delete from field data table
+            try
+            {
+                RunSqlCommand(commandText, entryId, _formsConnectionString);
+            }
+            catch (Exception ex)
+            {
+                output += "Error deleting " + entryId + " from FieldData table: " + ex.ToString();
+                Sitecore.Diagnostics.Log.Error("Forms database communication error.", ex, (object)this);
+            }
+
+
+            // delete from entries table
+            var formEntryTable = isSitecore10 ? "[sitecore_forms_storage].[FormEntries]" : "[FormEntry]";
+            commandText = "DELETE from " + formEntryTable + " WHERE ID = @EntryId";
+            try
+            {
+                RunSqlCommand(commandText, entryId, _formsConnectionString);
+                entriesDelete++;
+            }
+            catch (Exception ex)
+            {
+                output += "Error deleting " + entryId + " from Form Entry table: " + ex.ToString();
+                Sitecore.Diagnostics.Log.Error("Forms database communication error.", ex, (object)this);
+            }
+            return output;
         }
 
         protected bool IsSitecore10(string connectionstring)
@@ -237,7 +489,7 @@ namespace ContentExportTool
                 {
                     TableNames.Add(row[2].ToString());
                 }
-                connection.Close();         
+                connection.Close();
             }
 
             if (TableNames.Any(x => x.Contains("FormEntries")))
@@ -2077,5 +2329,6 @@ namespace ContentExportTool
 
         #endregion
 
+       
     }
 }

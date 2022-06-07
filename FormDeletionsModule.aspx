@@ -104,7 +104,7 @@
         }
 
         input[type='text'] {
-            width: 500px;
+            width: 180px;
             max-width: 80%;
         }
 
@@ -698,17 +698,28 @@
             </div>
             <div class="controls">
 
+                <div class="fixed-export-btn">
+                    <span class="header"><b>Quick Links</b></span>
+                    <div class="row">
+                        <a class="navButton" href="#formsExport">Form Export</a>
+                        <a class="navButton" href="#formsBasicDelete">Delete Form Entries By ID</a>
+                        <a class="navButton" href="#formsSearchDelete">Delete Entries Where...</a>
+                        <a class="navButton" href="#formsModifyEntries">Modify Form Entries</a>
+                        <a class="navButton" href="javascript:void(0)" onclick="window.scrollTo(0,0);">Back to Top</a>
+                    </div>
+                </div>
+
                 <div class="container">
 
                     <div class="row">
                        
                         <div class="advanced open open-default" id="formsExport">
-                            <a class="advanced-btn">Forms Tool</a>
+                            <a class="advanced-btn">Form Export</a>
                             <div class="advanced-inner">
                                 <div class="row advanced-search">
-                                    <h3>Forms Tool</h3>
+                                    <h3>Export Form Entries</h3>
                                     <span style="color: red" class="uploadResponse">
-                                        <asp:Literal runat="server" ID="litFormsResponse"></asp:Literal></span>
+                                        <asp:Literal runat="server" ID="litExportResponse"></asp:Literal></span>
 
 
                                     <span class="" style="display: block; margin-top: 10px;">
@@ -717,7 +728,6 @@
                                     <br />
 
 
-                                    <h3>Step 1: Export Form Entries</h3>
                                     Form: <br />
                                     <asp:DropDownList runat="server" ID="ddForms"></asp:DropDownList>
 
@@ -727,7 +737,27 @@
 
                                     <br />
                                     <br />
-                                    <h3>Step 2: Delete Form Entries</h3>
+                                    
+                                </div>
+
+                            </div>
+                        </div>
+
+                        <br /><br />
+                        <div class="advanced open open-default" id="formsBasicDelete">
+                            <a class="advanced-btn">Delete Form Entries By ID</a>
+                            <div class="advanced-inner">
+                                <div class="row advanced-search">
+                                    <h3>Delete Form Entries By ID</h3>
+                                    <span style="color: red" class="uploadResponse">
+                                        <asp:Literal runat="server" ID="litDeleteByIdResponse"></asp:Literal></span>
+
+                                    <span class="" style="display: block; margin-top: 10px;">
+                                        <b>Tip:</b> Use the Export feature above to generate the CSV for deletions, then update the CSV to select entries to delete and upload the CSV here.
+                                    </span>
+                                    <br />
+
+
                                     <asp:FileUpload runat="server" ID="uplFormDelete" />
                                     <br />
                                     <br />
@@ -737,6 +767,75 @@
                             </div>
                         </div>
 
+                        <br /><br />
+                        <div class="advanced open open-default" id="formsSearchDelete">
+                            <a class="advanced-btn">Delete Entries Where...</a>
+                            <div class="advanced-inner">
+                                <div class="row advanced-search">
+                                    <h3>Delete Entries Where...</h3>
+                                    <span style="color: red" class="uploadResponse">
+                                        <asp:Literal runat="server" ID="litFeedbackWhere"></asp:Literal></span>
+
+
+                                    <span class="" style="display: block; margin-top: 10px;">
+                                        Delete all form entries where a specified field has a specified value. This can be used for GDPR/privacy requirements, e.g. if a user requests their data be deleted, delete all entries that contain their email address.
+                                        
+                                        <br /><br />Entries can be deleted from a selected form, or from all forms.
+                                    </span>
+                                    <br />
+
+
+                                    <h3>Step 1: Select Form</h3>
+                                    Form: <br />
+                                    <asp:DropDownList runat="server" ID="ddDeleteWhereSelection"></asp:DropDownList>
+
+                                    <br />
+                                    <br />
+                                    <h3>Step 2: Set parameters</h3>
+                                    <span>Delete all entries where <b>Field Name</b> is </span><asp:TextBox runat="server" ID="inptFieldName"></asp:TextBox>
+                                    <span> and <b>Value</b> is </span><asp:TextBox runat="server" ID="inptFieldValue"></asp:TextBox>
+                                    <br /><br />
+                                    <span>Select whether to check where field is an exact match, or where field contains the specified value</span><br />
+                                    <asp:RadioButton ID="radioEquals" GroupName="RadioCompare" runat="server" Checked="true" Text="Value Equals"/>
+                                    <asp:RadioButton ID="radioContaines" GroupName="RadioCompare" runat="server" Text="Value Contains"/>
+                                    <br /><br />
+                                    <asp:CheckBox ID="chkCaseSensitive" runat="server" Checked="true"/> <b>Case Sensitive</b> (only delete where value is exact match)<br /><br />
+                                    <br />
+                                    <h3>Step 3: Click button</h3>
+
+                                    <span>Make sure your settings are correct before clicking this button! Deletions are irreversible!</span><br />
+                                    <asp:Button runat="server" ID="btnDeleteWhere" CssClass="spinner-btn" Text="Delete Form Entries"  OnClick="btnDeleteWhere_Click" />
+                                </div>
+
+                            </div>
+
+                            <br /><br />
+                            <div class="advanced open open-default" id="formsModifyEntries">
+                            <a class="advanced-btn">Modify Form Entries</a>
+                            <div class="advanced-inner">
+                                <div class="row advanced-search">
+                                    <h3>Modify Form Entries</h3>
+                                    <span style="color: red" class="uploadResponse">
+                                        <asp:Literal runat="server" ID="litModifyFeedback"></asp:Literal></span>
+
+                                    <span class="" style="display: block; margin-top: 10px;">
+                                        Modify form entries using a CSV. For each row, the entry with the matching Entry ID will be modified to update each field in the CSV. This can be used if a user submitted a form with incorrect data that they need corrected, like their email address or phone number.
+                                    </span>
+                                    <span class="" style="display: block; margin-top: 10px;">
+                                        <b>Tip:</b> Use the Export feature above to generate the CSV for modification, then update the CSV to modify the entries desired and upload the CSV here. To reduce risk of error, delete all entries from the CSV that do not need to be changed.
+                                    </span>
+                                    <br />
+
+
+                                    <asp:FileUpload runat="server" ID="uplModifyFile" />
+                                    <br />
+                                    <br />
+                                    <asp:Button runat="server" ID="btnModifyEntries" CssClass="spinner-btn" Text="Modify Form Entries"  OnClick="btnModifyEntries_Click" />
+                                </div>
+
+                            </div>
+                        </div>
+                        </div>
                     </div>
                 </div>
             </div>
